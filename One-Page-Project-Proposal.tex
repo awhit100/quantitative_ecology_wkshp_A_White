@@ -1,0 +1,132 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage[]{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\PassOptionsToPackage{hyphens}{url} % url is loaded by hyperref
+\usepackage[unicode=true]{hyperref}
+\hypersetup{
+            pdftitle={Ecology Workshop: Project Proposal},
+            pdfauthor={Allison White},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+% set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+
+
+\title{Ecology Workshop: Project Proposal}
+\author{Allison White}
+\date{January 10, 2020}
+
+\begin{document}
+\maketitle
+
+\subsection{Research Statement}\label{research-statement}
+
+I am a PhD student in the Biology Department at Florida International
+University. My research is focused on the application of active
+acoustics to study the population ecology of reef-associated fishes. My
+long term goal is to establish a long term fishery-independent survey of
+reef fishes in the southeast United States using active acoustics.
+Towards this end, I am currently investigating the design- and
+model-based implications of acoustic surveys over isolated fish
+aggregations for common population estimates such as fish density.
+``Star'' survey designs have become an increasingly popular alternative
+to parallel line designs in acoustic sampling of areas with isolated
+fish aggregations such as artificial reefs and spawning aggregation
+sites. While traditional parallel line surveys offer better coverage of
+the area surrounding a fish aggregation and less spatial autocorrelation
+between transect nodes, they often require a greater number of transects
+and present several practical difficulties in maneuvering tight turns.
+Star surveys involve fewer transects which are arranged in alternating
+directions and which all cross at the center of the aggregation site.
+Star designs may be easier to maneuver and provide a higher sampling of
+the targeted aggregation, but they have an inherently large spatial
+autocorrelation between transect nodes which can result in biased
+estimates of fish density.
+
+\subsection{Objectives and Hypothesis}\label{objectives-and-hypothesis}
+
+The objective of my project is to compare acoustically-derived fish
+density estimates across both star and parallel line survey designs
+using common model-based approaches to incorporate the spatial
+autocorrelation inherent in each. Neither of these survey designs
+provide the truly random samples assumed when estimating a mean fish
+density of isolated fish aggregations. Parallel line surveys provide
+systematic-random samples with reduced variance estimates and star
+surveys produce clustered estimates with even further-reduced estimates
+of variance. I hypothesize that each of these survey designs will
+produce significantly biased estimates of fish density both with and
+without modelling approaches to incorporate their spatial
+autocorrelation. When run as a simulation, I expect the mean fish
+density estimated from the star survey design to be significantly
+further from the simulated true mean than the mean estimate from the
+parallel line survey.
+
+\subsection{Datasets and Statistical
+Analysis}\label{datasets-and-statistical-analysis}
+
+We sampled goliath grouper (Epinephalus itajara) spawning aggregations
+at three artificial reefs off of Jupiter, Florida using both star and
+parallel hydroacoustic survey designs. I have already processed the raw
+data to derive estimates of grouper density from acoustic response at
+each sampling event. Grouper density estimates derived from
+geostatistical and general additive models (GAM) will be computed for
+both survey designs, as well as cluster model-based estimates for
+parallel line surveys and a concentric interval approach for star
+surveys. Conditional simulations will be performed to further
+investigate the influence of each design and model approach on mean
+estimates of fish density.
+
+\end{document}
