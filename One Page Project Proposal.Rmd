@@ -9,22 +9,15 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Research Statement
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+I am a PhD student in the Biology Department at Florida International University. My research is focused on the application of active acoustics to study the population ecology of reef-associated fishes. My long term goal is to establish a long term fishery-independent survey of reef fishes in the southeast United States using active acoustics. Towards this end, I am currently investigating the design- and model-based implications of acoustic surveys over isolated fish aggregations for common population estimates such as fish density.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Objectives and Hypothesis
 
-```{r cars}
-summary(cars)
-```
 
-## Including Plots
+## Datasets and Statistical Analysis
 
-You can also embed plots, for example:
+We sampled goliath grouper (Epinephalus itajara) spawning aggregations at three artificial reefs off of Jupiter, Florida using both star and parallel hydroacoustic survey designs. I have already processed the raw data to derive estimates of grouper density from acoustic response at each sampling event. I plan to compare the density estimates produced from each survey based on design
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Additionally, we compared common model-based approaches to incorporate the statistical sampling considerations in fish density estimates from both designs. Grouper density estimates derived from geostatistical and general additive models (GAM) were computed for both survey designs, as well as cluster model-based estimates for parallel line surveys and a concentric interval approach for star surveys. 
