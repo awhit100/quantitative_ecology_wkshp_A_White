@@ -1,0 +1,263 @@
+---
+title: "Assignment 2 - Nonlinear Models and Bootstrapping"
+author: "Allison White"
+date: "January 17, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Objectives
+The objective of this analysis is to understand annual trends in growth of Atlantic Weakfish (Cynoscion regalis). This will be done by fitting the von Bertalanffy length-at-age curve to annual fisheries-independent data. 
+
+## Methods
+The fisheries-independent data used was collected between 2007 and 2013 by the Northeast Area Mapping and Assessment Program (NEAMAP) in order to provide biological information to stock assessments of several commercially and recreationally harvested nearshore fish species in the Mid-Atlantic Bight. All length and age data were measured from fish caught in trawl surveys conducted in the late spring and fall of each year.
+
+
+## Site Information
+The NEAMAP trawl survey is conducted in nearshore waters of the US Atlantic coast between Massachusetts and North Carolina. These shallow waters range from approximately 20-90 ft in depth. This is a multispecies survey which includes Atlantic Weakfish. As Weakfish inhabit coastal and estuarine waters from Nova Scotia to Florida, the NEAMAP survey is one of many which provide biological information such as length, weight, age, and maturity to regular stock assessments of this species.
+
+```{r}
+library(rworldmap)
+library(ggmap)
+library(mapproj)
+library(GISTools)
+library(ggplot2)
+
+NEAMAP<-read.csv(file.choose()) # Open 'PG.csv'
+attach(NEAMAP)
+
+# Map NEAMAP Trawl Survey Area
+nmlat<-NEAMAP$LATITUDE_START
+nmlong<-NEAMAP$LONGITUDE_START
+
+par(mfrow=c(1,2),oma=c(2,1,2,0),mai=c(0,0,0,0))
+map('usa',xlim=c(-90,-65))
+segments(x0=c(-77,-77,-77,-71),x1=c(-71,-71,-77,-71),y0=c(35,42,35,35),y1=c(35,42,42,42),lwd=2)
+
+map("state",ylim=c(35,42),xlim=c(-77,-71),region=c("Florida","North Carolina","South Carolina","Virginia","Massachusetts","New York","New Jersey","Georgia","Rhode Island","Connecticut","Delaware","Maryland"))
+box()
+title(main="NEAMAP Trawl Survey",cex=1.3,outer=T,line=0.1)
+points(nmlong,nmlat,col=2,pch=20)
+axis(1)
+axis(2)
+north.arrow(xb=-72 , yb=35.7 , len=0.3 , lab= 'N')
+```
+
+## von Bertalanffy Growth
+The von Bertalanffy(1938) growth curve is the most widely used growth model in fisheries stock assessments. The length-at-age and weight-at-age von Bertalanffy equations provide species-specific growth patterns which inform fisheries managers about appropriate size limitations for fishers. Length-at-age data inherently follow a logarithmic curve which von Bertalanffy defined as follows:
+
+  Lt = linf(1-e^(-k(t-t0)))
+
+where the length at time t (Lt) is a function of age (t), maximum length (linf), the growth rate coefficient (k), and a hypothetical age at length zero (t0). 
+
+```{r}
+library(nlstools)
+
+plot(LENGTH..mm.FL.~AGE,data=NEAMAP,xlim=c(-3,7),xlab='Age (years)',ylab='Fork Length (mm)',main='Weakfish Length-at-Age Relationship')
+
+fit.eye<-nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),start=list(linf=300,k=0.5,t0=-1),data=NEAMAP,nls.control(warnOnly = TRUE),na.action = na.exclude)
+
+eye.parms<-coef(fit.eye)
+t<-seq(-3,7,length.out = length(LENGTH..mm.FL.))
+lines(sort(t),sort(predict(fit.eye,list(AGE = t))))
+abline(h=eye.parms[1],lty=2,col=2)
+abline(v=eye.parms[3],lty=2,col=4)
+text((eye.parms[3]+0.4),500,'t0',col=4)
+text(-2.8,(eye.parms[1]+30),'linf',col=2)
+text(0.5,220,'k',col=3)
+```
+
+## Annual Variation in Growth of Atlantic Weakfish
+Periodical stock assessments rely on historical data to project future trends in fish growth. Thus, it is important to understand how growth curves change for each species over time. In this analysis, von Bertalanffy growth curves were fit to length and age Weakfish data for each of the seven years present in the NEAMAP dataset. While many fisheries scientists choose to treat this growth curve as a linear model for the sake of simplicity, it is a non-linear equation and should be modelled as such. Here, annual von Bertalanffy growth curves were modelled using non-linear least squares regression and errors were estimated via non-parametric bootstrapping.
+
+```{r}
+# von Bertalanffy Growth Curve fit using selfStart() to select starting parameters
+# Model Function:
+  VBModel <- function(AGE,linf,k,t0) {
+    VB <- (linf*(1 - exp((-k)*(AGE-t0))))
+    return(VB)
+  }
+  
+# Initial values calculated from the data.
+VB.int <- function (mCall, LHS, data){
+  x <- data$AGE
+  y <- data$LENGTH..mm.FL.
+  linf <- max(na.omit(y), na.rm=T) # Maximum Length
+  k <- max(na.omit(x/y), na.rm=T) # Growth Rate coefficient
+  t0 <- -1 # Hypothetical Age at Length 0
+  #Create limits for parameters
+  linf[linf > 800] <- 800
+  k[k > 1] <- 1
+  k[k < 0.01] <- 0.01
+  value = list(linf,k,t0) # Must include this for the selfStart function
+  names(value) <- mCall[c("linf", "k", "t0")] # Must include this for the selfStart function
+  return(value)
+}
+
+# Selfstart function
+SS.VB <- selfStart(model=VBModel,initial= VB.int)
+
+# Initial values:
+iv <- getInitial(LENGTH..mm.FL. ~ SS.VB('AGE','linf','k','t0'),
+                 data = NEAMAP)
+iv
+
+#1: Dataframe created to store yearly parameter values (parms.year)
+parms.year <- data.frame(
+  YEAR=numeric(),
+  linf=numeric(),
+  k=numeric(),
+  t0=numeric(),
+  linf.pvalue=numeric(),
+  k.pvalue=numeric(),
+  t0.pvalue=numeric(), stringsAsFactors=FALSE, row.names=NULL)
+parms.year[1:7, 1] <- seq(2007,2013,1) # Adds years to the file
+
+#2: Function to fit von Bertalanffy model and extract paramters (length.year)
+length.year <- function(dataframe){ y <- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+                                             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=dataframe,
+                                             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+y.df <- as.data.frame(cbind(t(coef(summary(y)) [1:3, 1]), t(coef(summary(y)) [1:3, 4])))
+names(y.df) <-c("linf","k", "t0", "linf.pvalue", "k.pvalue", "t0.pvalue")
+return (y.df)}
+
+#3: Loop to fit yearly curves and add paramters to dataframe (parms.year)
+try(for(j in unique(NEAMAP$YEAR)){
+  # Determines starting values:
+  iv <- getInitial(LENGTH..mm.FL. ~ SS.VB("AGE", "linf", "k", "t0"), data = NEAMAP[which(NEAMAP$YEAR == j),])
+  # Fits length-at-age curve:
+  y3 <- try(length.year(NEAMAP[which(NEAMAP$YEAR == j),]), silent=T)
+  # Extracts data and saves it in the dataframe
+  try(parms.year[c(parms.year$YEAR == j ), 2:7 ] <- cbind(y3), silent=T)
+  #rm(y3)
+}, silent=T)
+
+#4: Bootstrapping for error estimation 
+#Names nls objects for each year
+nls.07<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2007),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+nls.08<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2008),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+nls.09<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2009),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+nls.10<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2010),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+nls.11<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2011),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+nls.12<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2012),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+nls.13<- nls(LENGTH..mm.FL.~(linf*(1 - exp((-k)*(AGE-t0)))),
+             start=list(linf= iv$linf,k= iv$k,t0= iv$t0),data=NEAMAP[which(NEAMAP$YEAR == 2013),],
+             control=nls.control(warnOnly = TRUE),na.action = na.exclude,upper=list(linf= 800,k= 1,t0= -0.001),algorithm = 'port')
+
+# Bootstraps NLS objects for each year
+boot.1<-try(nlsBoot(nls.07,niter=100),silent=T)
+boot.2<-try(nlsBoot(nls.08,niter=100),silent=T)
+boot.3<-try(nlsBoot(nls.09,niter=100),silent=T)
+boot.4<-try(nlsBoot(nls.10,niter=100),silent=T)
+boot.5<-try(nlsBoot(nls.11,niter=100),silent=T)
+boot.6<-try(nlsBoot(nls.12,niter=100),silent=T)
+boot.7<-try(nlsBoot(nls.13,niter=100),silent=T)
+
+# Creates a dataframe to store year parameter values (parms.year)
+boot.parms.year <- data.frame(
+  YEAR=numeric(),
+  linf.est=numeric(),
+  k.est=numeric(),
+  t0.est=numeric(),
+  linf.se=numeric(),
+  k.se=numeric(),
+  t0.se=numeric(), stringsAsFactors=FALSE, row.names=NULL)
+boot.parms.year[1:7, 1] <- seq(2007,2013,1) # Adds years to the file
+boot.parms.year[1:7, 2] <- rbind(boot.1$estiboot[1,1],boot.2$estiboot[1,1],boot.3$estiboot[1,1],boot.4$estiboot[1,1],boot.5$estiboot[1,1],boot.6$estiboot[1,1],boot.7$estiboot[1,1]) #Adds linf.est values
+boot.parms.year[1:7, 3] <- rbind(boot.1$estiboot[2,1],boot.2$estiboot[2,1],boot.3$estiboot[2,1],boot.4$estiboot[2,1],boot.5$estiboot[2,1],boot.6$estiboot[2,1],boot.7$estiboot[2,1]) #Adds k.est values
+boot.parms.year[1:7, 4] <- rbind(boot.1$estiboot[3,1],boot.2$estiboot[3,1],boot.3$estiboot[3,1],boot.4$estiboot[3,1],boot.5$estiboot[3,1],boot.6$estiboot[3,1],boot.7$estiboot[3,1]) #Adds t0.est values
+boot.parms.year[1:7, 5] <- rbind(boot.1$estiboot[1,2],boot.2$estiboot[1,2],boot.3$estiboot[1,2],boot.4$estiboot[1,2],boot.5$estiboot[1,2],boot.6$estiboot[1,2],boot.7$estiboot[1,2]) #Adds linf.se values
+boot.parms.year[1:7, 6] <- rbind(boot.1$estiboot[2,2],boot.2$estiboot[2,2],boot.3$estiboot[2,2],boot.4$estiboot[2,2],boot.5$estiboot[2,2],boot.6$estiboot[2,2],boot.7$estiboot[2,2]) #Adds k.se values
+boot.parms.year[1:7, 7] <- rbind(boot.1$estiboot[3,2],boot.2$estiboot[3,2],boot.3$estiboot[3,2],boot.4$estiboot[3,2],boot.5$estiboot[3,2],boot.6$estiboot[3,2],boot.7$estiboot[3,2]) #Adds t0.se values
+```
+
+# Results
+
+```{r}
+#Table
+library(gridExtra)
+vbg <- merge( parms.year, boot.parms.year, by.x="YEAR", by.y="YEAR") # Merge dataframes
+par(mfrow=c(1,1),oma=c(2,2,2,2),mai=c(1,1,1,1))
+plot(5,5,col='white',xaxt='n',yaxt='n',xlab='',ylab='',bty='n')
+rvbg<-round(vbg,digits=3)
+grid.table(rvbg[,1:7])
+```
+The table above shows the estimated von Bertalanffy growth parmeters and their associated p.values for each year between 2007 and 2013. Parameter estimates adequately fit the length-at-age data for all years except for 2010, 2011, and 2012. These years had much higher estimated maximum lengths (linf) than the maximum lengths estimated for the other years. The estimated growth curve coefficients (k) were also reduced compared to other years. This is evident in the predicted growth curves seen below, where the curvature of 2010-2012 length-at-age relationships is less pronounced and ultimately leads to a much larger maximum size than the relationships seen in the other years.
+
+```{r}
+par(mfrow=c(1,1),oma=c(2,2,2,1),mai=c(1,1,1,1))
+plot(LENGTH..mm.FL.~AGE,data=NEAMAP,xlim=c(-3,7),xlab='Age (years)',ylab='Fork Length (mm)',main='Weakfish Length-at-Age Relationship')
+
+t<-seq(-3,7,length.out = length(LENGTH..mm.FL.))
+lines(sort(t),sort(predict(nls.07,list(AGE = t))))
+lines(sort(t),sort(predict(nls.08,list(AGE = t))),col=2)
+lines(sort(t),sort(predict(nls.09,list(AGE = t))),col=3)
+lines(sort(t),sort(predict(nls.10,list(AGE = t))),col=4)
+lines(sort(t),sort(predict(nls.11,list(AGE = t))),col=5)
+lines(sort(t),sort(predict(nls.12,list(AGE = t))),col=6)
+lines(sort(t),sort(predict(nls.13,list(AGE = t))),col=7)
+legend('topleft',col=c(1:7),c('2007','2008','2009','2010','2011','2012','2013'),lty=c(1,1,1,1,1,1,1))
+```
+
+```{r}
+par(mfrow=c(3,1),mai=c(0,0.5,0,0),oma=c(2,2,2,1))
+boxplot(boot.1$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),ylab='linf')
+boxplot(boot.2$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),add=TRUE,at=2)
+boxplot(boot.3$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),add=TRUE,at=3)
+boxplot(boot.4$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),add=TRUE,at=4)
+boxplot(boot.5$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),add=TRUE,at=5)
+boxplot(boot.6$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),add=TRUE,at=6)
+boxplot(boot.7$coefboot[,1],xlim=c(1,7),xaxt='n',ylim=c(200,900),add=TRUE,at=7)
+title(main='Bootstrapped von Bertalanffy Growth Parameters',outer=T,line=0.4)
+
+boxplot(boot.1$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),ylab='k')
+boxplot(boot.2$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),add=TRUE,at=2)
+boxplot(boot.3$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),add=TRUE,at=3)
+boxplot(boot.4$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),add=TRUE,at=4)
+boxplot(boot.5$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),add=TRUE,at=5)
+boxplot(boot.6$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),add=TRUE,at=6)
+boxplot(boot.7$coefboot[,2],xlim=c(1,7),xaxt='n',ylim=c(0,1),add=TRUE,at=7)
+
+boxplot(boot.1$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),ylab='t0')
+boxplot(boot.2$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),add=TRUE,at=2)
+boxplot(boot.3$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),add=TRUE,at=3)
+boxplot(boot.4$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),add=TRUE,at=4)
+boxplot(boot.5$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),add=TRUE,at=5)
+boxplot(boot.6$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),add=TRUE,at=6)
+boxplot(boot.7$coefboot[,3],xlim=c(1,7),xaxt='n',ylim=c(-4,0),add=TRUE,at=7)
+axis(1,at=c(1:7),labels=c(2007:2013))
+```
+When comparing the means and variances of the bootstrapped growth parameter estimates, maximum size (linf) appears to be driving the poor fit of the growth curves in 2010-2012. The mean maximum length estimates for these years are all near the set threshold of 800 for this parameter and have very large variances in comparison to the other years. 
+
+The figure below shows the raw length-at-age data for 2010-2012 from the NEAMAP survey. Each of these years appear to have a single outlying data point for their oldest age group which is likely causing bias in the non-linear estimation of maximum length.
+
+```{r}
+par(mfrow=c(3,1),oma=c(2,2,2,1),mai=c(0,0.5,0,0))
+plot(LENGTH..mm.FL.~AGE,data=NEAMAP[which(NEAMAP$YEAR == 2010),],xaxt='n',xlim=c(0,4),ylab='')
+text(4,500,'2010')
+plot(LENGTH..mm.FL.~AGE,data=NEAMAP[which(NEAMAP$YEAR == 2011),],xaxt='n',xlim=c(0,4),ylab='')
+text(4,475,'2011')
+plot(LENGTH..mm.FL.~AGE,data=NEAMAP[which(NEAMAP$YEAR == 2012),],xaxt='n',xlim=c(0,4),ylab='')
+text(4,475,'2012')
+title(xlab='Age (years)',ylab='Fork Length (mm)',main='Weakfish Length-at-Age Relationship',outer=T,line=0.3)
+```
+
+# Discussion 
+These results show that Atlantic Weakfish growth curves do change from year to year. Ignoring the years biased by outlying datapoints, there was a ~150mm difference in maximum length estimated for 2008 and 2009 alone. This parameter is referenced by managers to decide minimum size limitations for fishers and is only estimated by stock assessments every six years or so for Weakfish. Seeing how drastically these parameters can change from year to year, it is very important to continue to monitor annual trends in growth in order to best inform fisheries management and conservation.
+
+
