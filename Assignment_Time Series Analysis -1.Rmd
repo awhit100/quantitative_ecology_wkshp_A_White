@@ -1,0 +1,239 @@
+---
+title: "Workshop 3_Timeseries Models"
+author: "Allison White"
+date: "1/24/2020"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Objectives
+The primary objective of this analysis is to describe the serial dependence of net ecosystem exchange (NEE) at a mangrove scrub site in Everglades National Park using environmental factors sucha as salinity, air temperature, water temperature, and photosynthetically active radiation (PAR).
+
+## Methods
+# Site Information 
+Daily rates of NEE were collected from tower site Ph-7 (TS/Ph-7) in Everglades National Park as a part of the Florida Coastal Everglades Long-term Ecological Research Project (Figure 1).
+```{r echo=FALSE}
+library(png)
+tsph7<-readPNG(file.choose(),native = T,info = F)
+par(mfrow=c(1,1),mai=c(0,0,0,0),oma=c(3,1,1,1))
+plot(c(1:10),c(1:10),type='n',xaxt='n',yaxt='n',xlab='',ylab='')
+rasterImage(tsph7,1,1,10,10)
+title(sub='Figure 1: Map displaying the Florida Coastal Everglades Long-term Ecological Research',outer=T,line=0.1)
+title(sub='sites in Everglades National Park. All data included in these analyses were collected',outer=T,line=1)
+title(sub=' from tower site TS/Ph-7.',outer=T,line=1.9)
+```
+
+# Statistical Analysis
+Autoregressive Integrated Moving Average (ARIMA) models were used to fit time series for NEE and examine its dependence on environmental factors including salinity, maximum water temperature, air temperature, and PAR. Each factor (including NEE) was tested for stationarity using the augmented Dickey-Fuller (ADF) test. Separate ARIMA models were fit to NEE time series with external regressions on each environmental factor. Akaike's Information Criterion (AIC) was used to test and compare the goodness-of-fit of each of these models and deermine which environmental factor most influences NEE over time.
+
+```{r echo=FALSE,include=FALSE}
+load('C:/Users/allwhite/Desktop/Quantitative Ecology Workshop/Time Series Analysis/ARIMA_Workshop.RData')
+
+library(zoo)
+library(tseries)
+library(forecast)
+library(xts)
+
+nee <- ts( mangroves$nee, start= 1, frequency=30)
+
+# par(mfrow=c(1,1), mai=c(0.25,0.8,0.1, 0.1))
+# plot( nee, typ="l", ylab= "NEE", xlab="")
+
+# plot(nee)
+# lines(tsclean(nee), col="red")
+
+nee <- tsclean(nee)
+
+nee.d <- decompose(nee, 'multiplicative')
+# plot(nee.d)
+
+# p-value < 0.05 indicates the TS is stationary
+# adf.test(nee )
+# 
+# acf(nee, lag.max=45)
+# 
+# pacf(nee, lag.max=45)
+
+arima.nee1 <-auto.arima(nee, trace=TRUE)
+
+# tsdisplay(residuals(arima.nee1), lag.max=45)
+
+arima.nee2 <-arima(nee , order=c(10,1,3), seasonal= list(order=c(2,0,2)))
+
+# tsdisplay(residuals(arima.nee2), lag.max= 30)
+
+# You want to minimize AIC
+# AIC(arima.nee1, arima.nee2)
+# 
+# par(mfrow=c(1,1))
+# plot(nee , typ="l"); lines(fitted(arima.nee2),col="red")
+# 
+# 
+# # Measuring for significant difference from white noise.
+# # You need a p-value greater than 0.05!
+# checkresiduals(arima.nee2, lag=36)
+# 
+# par(mfrow=c(1,1))
+# plot(nee , typ="l"); lines(fitted(arima.nee2),col="red")
+# 
+# plot(forecast(arima.nee2, h=30))
+
+sal <- ts(mangroves$salinity.max, start= 1, frequency=30)
+
+# par(mfrow=c(1,1), mai=c(0.25,0.8,0.1, 0.1))
+# plot(sal , typ="l", ylab= "Salinity", xlab="")
+# 
+# plot(sal , typ="l", ylab= "Salinity", xlab="")
+# lines(tsclean(sal) , col="red")
+
+sal <- tsclean(sal)
+
+sal.d <- decompose(sal, 'multiplicative')
+# plot(sal.d)
+# 
+# # p-value < 0.05 indicates the TS is stationary
+# adf.test(sal)
+# 
+# adf.test(diff(sal))
+# 
+# ccf( diff(sal),nee, na.action = na.pass, lag.max=40, plot=TRUE)
+
+arima.nee3 <-auto.arima(nee, xreg=c(diff(sal),0), trace=TRUE)
+
+#compare to current model
+# AIC(arima.nee2, arima.nee3 )
+
+sal.i <- sal
+sal.i[sal.i < 25 ]<- 0
+sal.i[sal.i >= 25 ]<- 1
+# plot(sal.i)
+
+arima.nee4 <-auto.arima(nee, xreg=sal.i, trace=TRUE)
+
+# AIC(arima.nee2,arima.nee4 )
+# 
+# checkresiduals(arima.nee4, lag=36)
+# 
+# par(mfrow=c(1,1))
+# plot(nee , typ="l"); lines(fitted(arima.nee4),col="red")
+
+
+######### Create a better model #######
+w.temp.max <- ts(mangroves$water.tmax, start= 1, frequency=30)
+w.temp.min <- ts(mangroves$water.tmin, start= 1, frequency = 30)
+a.temp <- ts(mangroves$tair, start= 1, frequency=30)
+par <- ts(mangroves$par, start= 1, frequency=30)
+
+# par(mfrow=c(1,1),mai=c(0.3,0.8,0.3,0),oma=c(1,2,1,1))
+# plot(w.temp.max,type='l',ylab='Maximum Water Temperature',xlab='')
+# plot(w.temp.min,type='l',ylab='Minimum Water Temperature',xlab='')
+# plot(a.temp,type='l',ylab='Air Temperature',xlab='')
+# plot(par,type='l',ylab='PAR',xlab='')
+
+# Water Temperature Maximum
+w.temp.max<-tsclean(w.temp.max)
+
+w.temp.max.d <- decompose(w.temp.max, 'multiplicative')
+# plot(w.temp.max.d)
+
+# p-value < 0.05 indicates the TS is stationary
+# adf.test(w.temp.max)
+# 
+# adf.test(diff(w.temp.max))
+# 
+# ccf( diff(w.temp.max),nee, na.action = na.pass, lag.max=40, plot=TRUE)
+
+
+arima.nee5 <- auto.arima(nee,xreg=c(diff(w.temp.max),0),trace=TRUE)
+
+# AIC(arima.nee4, arima.nee5)
+# 
+# checkresiduals(arima.nee5, lag=36)
+# 
+# par(mfrow=c(1,1))
+# plot(nee , typ="l"); lines(fitted(arima.nee5),col="red")
+
+
+# Air Temperature
+a.temp<-tsclean(a.temp)
+
+a.temp.d <- decompose(a.temp, 'multiplicative')
+# plot(a.temp.d)
+# 
+# # p-value < 0.05 indicates the TS is stationary
+# adf.test(a.temp)
+# 
+# adf.test(diff(a.temp))
+# 
+# ccf( diff(a.temp),nee, na.action = na.pass, lag.max=40, plot=TRUE)
+# 
+
+arima.nee7 <- auto.arima(nee,xreg=c(diff(a.temp),0),trace=TRUE)
+
+# AIC(arima.nee7, arima.nee5)
+# 
+# 
+# checkresiduals(arima.nee7, lag=36)
+# 
+# par(mfrow=c(1,1),oma=c(3,1,0,0),mai=c(1,1,1,1))
+# plot(nee , typ="l"); lines(fitted(arima.nee7),col="red")
+# mtext('Figure 3: Predicted NEE time series with air temperature',side=1,line = 0,outer=T)
+# mtext('regression (red line) plotted against the NEE time',side = 1,line = 1,outer = T)
+# mtext('series observed in the raw data.',side = 1,line = 2,outer = T)
+
+
+# PAR
+par<-tsclean(par)
+
+par.d <- decompose(par, 'multiplicative')
+# plot(par.d)
+# 
+# # p-value < 0.05 indicates the TS is stationary
+# adf.test(par)
+# 
+# adf.test(diff(par))
+# 
+# ccf( diff(par),nee, na.action = na.pass, lag.max=40, plot=TRUE)
+
+
+arima.nee6 <- auto.arima(nee,xreg=c(diff(par),0),trace=TRUE)
+
+# AIC(arima.nee5, arima.nee6)
+# 
+# checkresiduals(arima.nee6, lag=36)
+# 
+# par(mfrow=c(1,1))
+# plot(nee , typ="l"); lines(fitted(arima.nee6),col="red")
+
+```
+
+## Results
+All time series were found to be stationary using the ADF (p<0.05). The ARIMA model fitting NEE with air temperature as an external regression produced the lowest AIC value (Table 1). This suggests that modelling the NEE time series as a factor of air temperature had the best goodness-of-fit (Figure 2).
+```{r echo=FALSE}
+library(gridExtra)
+allAIC<-AIC(arima.nee1,arima.nee3,arima.nee5,arima.nee7,arima.nee6)
+par(mfrow=c(1,1),oma=c(1,1,1,1),mai=c(1,1,1,1))
+plot(1,1,col='white',xaxt='n',yaxt='n',xlab='',ylab='',bty='n')
+rAIC<-round(allAIC[,2],digits=1)
+names.arima<-c('None','Salinity','Maximum Water Temperature','Air Temperature','PAR')
+frame.AIC<-data.frame(names.arima,rAIC)
+colnames(frame.AIC) <- c('Environmental Factors','AIC')
+grid.table(frame.AIC)
+mtext('Table 1: AIC values of ARIMA models fitting',side=3,line = 1.6)
+mtext('time series of NEE with external regressions',side=3,line = 0.8)
+mtext('of  environmental factors.',side=3,line = 0)
+```
+
+```{r echo=FALSE}
+par(mfrow=c(1,1),oma=c(3,1,0,0),mai=c(1,1,1,1))
+plot(nee , typ="l",ylab='NEE'); lines(fitted(arima.nee7),col="red")
+mtext('Figure 2: Predicted NEE time series with air temperature',side=1,line = 0,outer=T)
+mtext('regression (red line) plotted against the NEE time',side = 1,line = 1,outer = T)
+mtext('series observed in the raw data.',side = 1,line = 2,outer = T)
+```
+
+## Discussion
+From the results of these analyses, air temperature appears to have the most influence on the NEE time series. The external regression of salinity appears to be the only environmental factor which did not improve the time series fit of NEE, as the AIC value waas higher than the individual NEE time series with no environmental factor regression. As the models including air temperature, maximum water temperature, and PAR as external regressors all had better goodness-of-fit than the individual NEE time series model, it is likely that these environmental factors follow similar trends in change over time as NEE and are likely drivers of the change in NEE over time.
+
+
