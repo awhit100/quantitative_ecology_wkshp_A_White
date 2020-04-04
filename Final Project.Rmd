@@ -1,0 +1,237 @@
+---
+title: In Situ Measurement of Target Strength for Red Snapper in the Northern Gulf
+  of Mexico
+author: "Allison White"
+date: "April 3, 2020"
+output: html_document
+---
+
+##Introduction
+Red Snapper (Lutjanus campechanus) is one of the most economically valuable species in the northern Gulf of Mexico (nGOM). This long-lived fish inhabits a wide variety of habitats throughout its life and is a very attractive table fare due to its bright red coloration. Fisheries management models have indicated a substantial decline in Red Snapper populations in recent years (SEDAR, 2018). This decline has been partly contributed to a change in habitat usage. Red Snapper are the most abundant reef-associated species in the nGOM and are well documented at the growing number of artificial reefs in this area (e.g. Dance et al., 2011). Their high association with artificial reefs may make them more susceptible to overharvesting, as artificial complexes concentrate exploitable reef fish biomass into small areas which often have publicly known locations (e.g. Karnauskas et al., 2017). In order to improve management measures, it is crucial to understand the distribution and abundance of Red Snapper across all of their habitats in the nGOM. As artificial reefs often have high vertical profiles that complicate traditional surveying methods to collect fishery-independent biological data, there is a growing interest in the use of advanced technologies such as active acoustics to measure reef-associated species like Red Snapper at artificial complexes.
+
+Active acoustics (hereafter “acoustics”) is the use of transmitted sound to detect fish and other organisms and has many advantages over other methods and technologies for collecting aquatic ecological data. Acoustics offer fisheries scientists a non-invasive means of acquiring high-resolution data across large areas (MacLennan and Simmonds, 1992). These methods are also a time-effective means of sampling the entire water column and can operate over a broad frequency range (Simmonds and MacLennan, 2005). Unlike other water column sampling methods, acoustics are not limited by water clarity or depth. Additionally, avoidance behavior is virtually non-existent for all marine organisms with the exception of echo-locating cetaceans (Koslow, 2009). However, acoustic methods also have several limitations which greatly constrain the application of acoustics to surveying aquatic ecological processes.
+
+The greatest limitation of acoustics methods is the inability to distinguish among species of targets (termed “taxon discrimination”; MacLennan and Holliday, 1996). This is particularly hindering in the application of acoustics to survey populations with high species diversity, such as the natural and artificial reef systems which Red Snapper closely associate with. Acoustic data must be combined with other methods capable of discriminating among taxa (such as visual surveys) in order to partition acoustic responses among species present in a given habitat. In this study, acoustics were combined with tagging and visual surveys to estimate the relationship between target strength (an acoustic response) and length (derived from captured and tagged fish) for Red Snapper. This relationship is species-specific and will be applied in a future study to partition acoustic responses from Red Snapper in a larger dataset collected along the Florida nGOM coast using similar acoustic methods and length estimates from concurrent visual surveys. 
+
+##Methods
+Red Snapper (n=50) were caught by hook and line at a shallow natural reef complex off of the Florida panhandle in the nGOM (Figure 1). Fish total lengths were measured and tagged before being released. Following release, a SIMRAD EK80 38kHz split-beam echosounder was towed over the tagging release locations in 15 minute intervals. Echoview 10.0 (Sonar Data Pty., Ltd.) was used to scrutinize all acoustic data. The raw acoustic data was visually inspected to remove poor quality regions (i.e. bubble ringdown, spike noise, etc.). After cleaning, automated features within Echoview were used to identify individual fish targets, and previously observed behavior metrics (i.e. location in the water column and schooling behavior) were used to separate targets suspected to be Red Snapper. The target strengths (TS, dB re 1m^2) of these targets were exported and combined with Red Snapper total lengths (TL, cm) from the tagged fish to define the Red Snapper TS-TL relationship described below.
+
+```{r,echo=FALSE,include=FALSE}
+setwd('C:/Users/allwhite/Desktop/Quantitative Ecology Workshop/Project/')
+
+tracks<-read.csv('38kHzFishTracksAllSites.csv',header = TRUE)
+tags<-read.csv('Tagged RS summary data.csv',header = TRUE)
+
+### Bathymetry Map ########
+library(marmap)
+library(zoom)
+library(GISTools)
+
+PNG_Map <- getNOAA.bathy(lon1 = -89, lon2 = -84, lat1 = 29, lat2 = 31, resolution = 1) 
+greys <- c(grey(0.9),grey(0.8),grey(0.6))
+white <- ("white")
+black <- ("black")
+typecol<-c('white','white','white','white','white','white','white','white','white','white','white','white','white','white','white','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48','gray48')
+```
+```{r,echo=FALSE}
+#map
+par(mfrow=c(2,1),mai=c(0,0,0,0),oma=c(6,4,4,2))
+plot(PNG_Map, image = TRUE, land = TRUE, xlim=c(-87.5,-85.5),col=1,drawlabels=c(FALSE,FALSE,FALSE),deep=c(-400,-100,-30),shallow=c(-200,-50,0),step=c(100,50,10),
+     ylim=c(29.1,30.8), xaxs = "i", yaxs = "i", lty = c(1, 1, 1), lwd =
+       c(0.6, 0.6, 1.2), bpal = list(c(0, max(PNG_Map), greys),
+                                     c(min(PNG_Map),0 , white)),
+     xaxt='n',xlab='',ylab='')
+box()
+axis(3)
+points(-86.15,29.94,pch=15,col=2)
+north.arrow(-85,30.5,len=0.05,cex.lab = 0.5)
+tracks.lat<-tracks$Lat_M
+tracks.lon<-tracks$Lon_M
+tags.lat<-tags$Lat
+tags.lon<-tags$Lon
+plot(tracks.lon,tracks.lat,col=2,xlim=c(-86.151,-86.139),ylim=c(29.938,29.945),pch=16,xlab='',ylab='',yaxt='n')
+points(tags.lon,tags.lat,col=4,pch=8,cex=2)
+axis(4)
+legend('bottomleft',pch=c(16,8),col=c(2,4),c('Ensonified Fish','Tagging Sites'),bty='n',cex=0.7)
+mtext('Figure 1: Area map (top) and relative locations (bottom) of',side=1,outer=T,line=1.8,cex=0.8)
+mtext('red snapper tagging sites (blue) and targets from',side=1,outer=T,line=2.4,cex=0.8)
+mtext('acoustic transects (red).',side=1,outer=T,line=3,cex=0.8)
+```
+
+Fish TS is a function of body size (Love, 1971). However, as TS is derived primarily from the cross-sectional backscatter of sound off of the swimbladder (which varies in shape, size, and orientation to fish length across species), the TS-TL relationship is species-specific. As TS is calculated in the logarithmic domain and TL is linear, the generally accepted TS-TL relationship is a logarithmic curve (Equation 1).
+
+               TS = mlog10(TL) + b                 (Eq. 1)
+
+This relationship can be used to estimate a range of target strengths from length data with species-specific slope (m) and intercept (b). However, estimating m and b for a species of interest requires paired TS and TL observations. This is generally not feasible, as no methodology is capable of simultaneously surveying the entire water column other than acoustics and there are several practical issues with using acoustics while other technologies are submerged at a sampling location. Here, a curve-fitting approach described by Gastauer et al. (2017) was applied to make TS and TL distributions directly comparable. Individual TS and TL observations (xi) were first scaled around their means (x) and standard deviations (sd) and then shifted to ensure all values were in the positive domain (offset; Equation 2).
+
+              xscaled = (xi - x)/sd + offset       (Eq. 2)
+
+Kernel density estimates of the two scaled distributions (TSdist, bandwidth=0.26; TLdist, bandwidth=0.41) were constructed and overlaid to derive a mean sampling distribution (Mdist; Equation 3).
+
+              Mdist = (TSdist + TLdist)/2           (Eq. 3)
+
+One hundred values were randomly selected from Mdist and back-transformed into matched TS and TL pairs (Figure 2). These paired observations were used to estimate m and b for the Red Snapper TS-L relationship (Equation 1) using nonlinear least-squares regression. Errors in m and b estimates were estimated via non-parametric boostrapping.
+```{r,echo=FALSE,include=FALSE}
+### Curve Fitting TS and L ######
+library(nlstools)
+TSlinear<-10^(tracks$TS_mean/10)
+offscaleTS<-((TSlinear-mean(TSlinear))/sd(TSlinear))
+offscaleTL<-((tags$TL-mean(tags$TL))/sd(tags$TL))
+
+offTS<-min(offscaleTS)
+offTL<-min(offscaleTL)
+
+scaledTS<-offscaleTS+abs(offTS)+1
+scaledTL<-offscaleTL+abs(offTL)+1
+
+skdTS<-density(scaledTS)
+skdTL<-density(scaledTL)
+
+kdTSmode<-skdTS$x[which.max(skdTS$y)]
+kdTLmode<-skdTL$x[which.max(skdTL$y)]
+
+modediff<-kdTLmode - kdTSmode
+
+skdTL$x<-skdTL$x-modediff
+
+kdTLmode<-skdTL$x[which.max(skdTL$y)]
+
+rowTSmode<-which(skdTS$x==kdTSmode) #find row of mode
+rowTLmode<-which(skdTL$x==kdTLmode)
+rowTSmode
+rowTLmode
+
+rowdiff<-rowTLmode-rowTSmode
+
+skdTSx<-skdTS$x[1:(512-rowdiff)]
+skdTSy<-skdTS$y[1:(512-rowdiff)]
+
+skdTLx<-skdTL$x[(1+rowdiff):512]
+skdTLy<-skdTL$y[(1+rowdiff):512]
+
+mdist<-(skdTSy+skdTLy)/2
+
+mdists<-sample(mdist,100,replace=FALSE)
+
+curveTS<-(sd(TSlinear)*(mdists-abs(offTS)))+mean(TSlinear)
+curveTL<-(sd(tags$TL)*(mdists-abs(offTS)))+mean(tags$TL)
+
+curvedata<-data.frame(curveTL,curveTS)
+
+
+# Model Function:
+tsl <- function(curveTL,m,b) {
+  model <- ((m*log10(curveTL))+b)
+  return(model)
+}
+
+# Initial values calculated from the data.
+tsl.int <- function (mCall, LHS, data){
+  x <- data$curveTL
+  y <- data$curveTS
+  m <- max(y/x) # slope
+  b <- min(y) # intercept
+  value = list(m,b) # Must include this for the selfStart function
+  names(value) <- mCall[c("m", "b")] # Must include this for the selfStart function
+  return(value)
+}
+
+# Selfstart function
+SS.tsl <- selfStart(model=tsl,initial= tsl.int)
+
+# Initial values:
+iv <- getInitial(curveTS ~ SS.tsl('curveTL','m','b'),
+                 data = curvedata)
+iv
+
+fit.curve<-nls(curveTS ~ tsl(curveTL,m,b),data=curvedata,start=list(m=iv$m,b=iv$b))
+summary(fit.curve)
+```
+```{r,echo=FALSE}
+#Figure 2
+par(mfrow=c(1,1),mai=c(1,1,0,0),oma=c(1,1,1,1))
+plot(skdTSx,skdTSy,col=2,xlab='',main='',type='l',ylab='Density')
+lines(skdTLx,skdTLy,col=4)
+lines(skdTSx,mdist,col=1,lty=2)
+legend('topright',lty=c(1,1,2),col=c(2,4,1),c('TSdist (n=88,bw=0.26)','TLdist (n=50,bw=0.41','Mdist'),bty='n',cex=0.7)
+mtext('Figure 2: Scaled kernel density distributions of',side=1,outer=F,line=2)
+mtext('TS (red) and TL (blue) with sample sizes (n)',side=1,outer=F,line=3)
+mtext('and bandwidths (bw). The dotted black line',side=1,outer=F,line=4)
+mtext('shows the mean distribution between the two.',side=1,outer=F,line=5)
+```
+
+##Results
+The target strength - length curve for Red Snapper estimated by nonlinear least squared regression from curve fitted back-transformed TS and TL data is shown in Equation 4.
+
+               TS = 24.5log10(TL) - 20.36         (Eq. 4)
+
+This TS-TL curve indicates an expected TS range of -46 to -34 db re 1m^2 for Red Snapper TL between 400 and 440 cm (Figure 3). While the TS-TL relationship appears to fit the curve-fitted data very well, the curve-fitted length distribution is small compared to the raw lengths from the tagged Red Snapper (Figure 4). This seems to suggest that more input length data is required to model the TS-TL relationship for this species. The estimated slope and intercept parameters for this relationship are compared to those estimated for Red Snapper in recent work by Boswell et al. (unpublished) in Table 1. 
+
+```{r,echo=FALSE}
+#Figure 3
+par(mfrow=c(1,1),mai=c(1.5,1,0,0.5),oma=c(2,1,1,1))
+plot(curveTL,10*log10(curveTS),xlab='TL (cm)',ylab=expression('TS (dB re 1m'^2*')'))
+lines(sort(curveTL),sort(10*log10(predict(fit.curve))),col=2,lwd=2)
+legend('bottomright',pch=c(1,NA),lty=c(NA,1),col=c(1,2),bty='n',c('Curve-Fitted Data','NLS TS-L'))
+mtext('Figure 3: Target strength-Length relationship modelled',side=1,outer=F,line=4)
+mtext('from nonlinear least squared regression of curve-fitted',side=1,outer=F,line=5)
+mtext('TS (back-transformed to log dimension) and TL data.',side=1,outer=F,line=6)
+
+#Figure 4
+par(mfrow=c(1,1),mai=c(1,0,0,0),oma=c(4,4,2,2))
+boxplot(tags$TL,xlim=c(0.5,2.5),at=1,ylab='')
+boxplot(curveTL,add=TRUE,at=2)
+axis(side=1,at=c(1,2),labels=c('Raw TL','Curve-Fitted TL'))
+mtext('Figure 4: Total length (cm) distributions of the',side=1,outer=F,line=2)
+mtext('raw TL versus the curve-fitted TL data.',side=1,outer=F,line=3)
+```
+
+```{r,echo=FALSE}
+#Table 1
+library(gridExtra)
+
+boot.curve<-try(nlsBoot(fit.curve,niter=100),silent=T)
+
+m<-c(abs(10*log10(boot.curve$estiboot[1,1])),31.4)
+b<-c(10*log10(abs(boot.curve$estiboot[2,1])),-82.9)
+n<-c('TS=88; TL=50',23)
+table.dat<-data.frame(round(m,digits=2),round(b,digits=2),n)
+     
+par(mfrow=c(1,1),oma=c(2,2,2,2),mai=c(1,1,1,1))
+plot(5,5,col='white',xaxt='n',yaxt='n',xlab='',ylab='',bty='n')
+grid.table(table.dat,rows=c('NLS Curve-Fitting','Boswell et al. (unpub)'),cols=c('m','b','n'))
+mtext('Table 1: Red Snapper TS-TL slope (m) and intercept (b)',side=3,outer=F,line=3.1,cex=1)
+mtext('estimated by the nonlinear least squared regression',side=3,outer=F,line=2.1,cex=1)
+mtext('curve-fitting method compared to those derived by',side=3,outer=F,line=1.1,cex=1)
+mtext('Boswell et al. (unpublished) at 38kHz.',side=3,outer=F,line=0.1,cex=1)
+```
+
+##Discussion
+The target strength - length relationship for red snapper derived in this study shows the effectiveness of the curve-fitting method. However, the small length distribution generated by this method is of some concern. I believe that a greater sample size of Red Snapper lengths is required before applying this TS-TL relationship to other acoustic data. This is not entirely unexpected, as the original plan was to use lengths derived from stereo cameras deployed at the sampling locations which recorded video data during the acoustic surveys. However, as the processed lengths from the stereo cameras are not yet available I decided to supplement this model with lengths measured from the tagging component of this experiment. The fish measured in the tagging data were caught by hook and line, which is a highly size-selective sampling method. The resulting length distributions from the tagging data are likely biased towards larger-sized Red Snapper. I expect the stereo camera lengths to be more informative in the TS-TL relationship, as the visual survey methods do not have any size-selectivity in detection of Red Snapper.
+
+My TS-TL slope and intercept estimates vary from those estimated for Red Snapper in a recent study by Boswell et al. (unpublished). While my slope parameter is only slightly lower than the slope reported by Boswell et al., my intercept parameter is much higher, which would would cause a large disparity between the shapes of these two TS-TL curves. While the biased length distribution from the tagging study may contribute to the discrepency in these estimates, it should be noted that a discrepency was expected between these models due to some key differences in sampling methods. Target strengths in Boswell et al. were calculated from CT scanning rather than split-beam echosounders as in the current study. While this method allowed for the collection of directly-paired target strength and length data, it is not possible to apply this method to survey fish in their natural environment. Also, as the fish are removed from water for this method, the reported target strengths do not reflect the attenuation of sound that is lost through heat consumption when travelling through a viscous substance such as water. 
+
+For these reasons, the curve-fitting approach to pair target strengths derived from split-beam acoustic surveys of Red Snapper in their natural environment is expected to provide a more accurate TS-TL relationship once the processed stereo camera lengths are subsituted. As soon as these processed lengths become available, the TS-TL relationship will be re-modelled using the methods described above and applied to determine a target strength threshold which can be used in split-beam acoustic data collected from other locations in the nGOM. These thresholds will be applied to partition acoustic responses from Red Snapper and ultimately to provide abundance estimates across a wide variety of habitats utilized by Red Snapper in the nGOM.
+
+
+##Literature Cited
+
+Boswell, K. M., Pederson, G., Taylor, C. J., LaBua, S., and Patterson, W. F. III. 2020. Morphological variation and broadband scattering responses of reef-associated fishes from the Southeast United States. Fisheries Research (In Review).
+
+Dance, M. A., Patterson III, W. F., and Addis, D. T. 2011. Fish community and trophic structure at artificial reef sites in the northeastern Gulf of Mexico. Bulletin of Marine Science 87(3): 301-324.
+
+Gastauer, S., Scoulding, B., and Parsons, M. 2017. Estimates of variability of goldband snapper target strength and biomass in three fishing regions within the Northern Demersal Scalefish Fishery (Western Australia). Fisheries Research 193: 250 - 262.
+
+Karnauskas, M., Walter III, J. F., Campbell, M. D., Pollack, A. G., Drymon, M., and Powers, S. 2017. Red Snapper distribution on natural habitats and artificial structures in the northern Gulf of Mexico. Marine and Coastal Fisheries 9: 50-67.
+
+Koslow, J. A. 2009. The role of acoustics in ecosystem-based fishery management. 
+
+Love, R. H. 1971. Measurements of fish target strength: A review. Fisheries Bulletin 69(4): 703-715.
+
+MacLennan, D. N. and Simmonds, E. J. 1992. Fisheries acoustics. London: Chapman & Hall.
+
+Maclennan, D. N. and Holliday, D. V. 1996. Fisheries and plankton acoustics: past, present, and future. ICES Journal of Marine Science 53: 513–516.
+
+SEDAR, 2018. Southeast Data Assessment and Review SEDAR 52 – Gulf of Mexico Red Snapper Stock Assessment Report SEDAR. North Charleston S.C., p. 403.
+
+Simmonds, E. J. and MacLennan, D. N. 2005. Fisheries acoustic: theory and practice, 2nd ed. Blackwell Science, Oxford. 437 pp.
